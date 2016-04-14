@@ -8,6 +8,10 @@ var ScoreLayer = cc.Layer.extend({
     }
 });
 
+var GAMEOVER = 'GAMEOVER';
+var RUNNING = 'RUNNING';
+var PAUSED = 'PAUSED';
+
 var GameLayer = cc.Layer.extend({
     _bird: null,
     _tubesHandler:null,
@@ -18,6 +22,7 @@ var GameLayer = cc.Layer.extend({
     _points:0,
     _label:null,
     _scoreLayer:null,
+    _currentState:null,
     ctor:function () {
         //////////////////////////////
         // 1. super init first
@@ -25,6 +30,9 @@ var GameLayer = cc.Layer.extend({
 
         // markup self reference
         var self = this;
+
+        // set current state of the game (in advance, we need to change the switch state by the State Pattern)
+        this._currentState = RUNNING;
 
         // start the definition of points
         this._points = 0;
@@ -42,37 +50,43 @@ var GameLayer = cc.Layer.extend({
         this._background = new Background();
         this.addChild(this._background);
 
-        // instantiate player
-        this._bird = new Player();
-        this.addChild(this._bird);
-
         // creates this._ground
         this._ground = new Ground();
         this.addChild(this._ground, 5);
 
-        // threshold will be 1.5 this._bird size
+        // instantiate player
+        this._bird = new Player();
+        this._bird.setMinMaxHeight(this._ground.getBoundingBox().height + this._bird.getBoundingBox().height / 2.4, cc.winSize.height);
+        this.addChild(this._bird, 9);
 
+        // threshold will be 1.5 this._bird size
         this._tubesHandler = new TubesHandler(this._bird.getBoundingBox().height * 7, 10, this._ground.getBoundingBox().height);
         this._tubesHandler.checkIntersectionWithPlayer = function(tubeUpRect, tubeDownRect, coinRect, tubePair){
+
           var birdRect = self._bird.getBoundingBox();
-          console.log(tubeDownRect)
           var hasIntersectedTube =
               cc.rectIntersectsRect(tubeUpRect, birdRect) ||
               cc.rectIntersectsRect(tubeDownRect, birdRect);
           var hasIntersectedGround = cc.rectIntersectsRect(self._ground.getBoundingBox(), birdRect);
           var hasIntersectedCoin = cc.rectIntersectsRect(coinRect, birdRect);
 
+          // you're going to die!
           if (hasIntersectedTube || hasIntersectedGround){
-            console.log("Tube Or Ground!! Game Over!!!");
-            console.log(self._bird.getBoundingBox());
-            self._paused = true;
+            console.log('Tube or Ground, DIE!');
+            // Change game state to game over state
             self.gameOver();
+            self._currentState = GAMEOVER;
+            return true;            
           }
+          // you've got some coins
           else if (hasIntersectedCoin){
+
+            console.log("Coin!!!! Point!");
             self.earnPoint();
             tubePair.removeCoin();
-            console.log("Coin!!!! Point!");
           }
+
+          return false;
         };
 
         this.addChild(this._tubesHandler, 4);
@@ -94,46 +108,54 @@ var GameLayer = cc.Layer.extend({
             cc.eventManager.addListener({
                 event : cc.EventListener.KEYBOARD,
                 onKeyPressed: function(key,event){
-                  console.log(key);
-                  if (key === 27) this._paused = !this._paused;
+                  if (key === 65) cc.log("Bird Bounding Box and Rect:", self._bird.getBoundingBox(), self._bird.getRect());
                 }
             }, this);
         }
+
+        // checks if the device you are using is capable of mouse input
+        if ( cc.sys.capabilities.hasOwnProperty( 'mouse' ) )
+        {
+            cc.eventManager.addListener(
+            {
+              event: cc.EventListener.MOUSE,
+              
+              onMouseDown: function( event )
+              {
+                  if ( event.getButton( ) == cc.EventMouse.BUTTON_LEFT )
+                  {
+                      cc.log("Mouse:(",event.getLocationX( ),",",event.getLocationY(),")");
+                  }
+              }
+            }, self);
+        }
+
 
         return true;
     },
     update : function(dt){
 
-        // if game paused, return
-        if (!this._paused){
-          for(var i = 0; i < this._child_nodes.length; i++){
-              this._child_nodes[i].update(dt, 100);
-          }
+        switch(this._currentState){
+          case RUNNING:
+            for(var i = 0; i < this._child_nodes.length; i++){
+                this._child_nodes[i].update(dt, 100);
+            }
+            break;
+          case PAUSED:
+            // Do nothing, just pause
+            break;
 
+          case GAMEOVER:
+            this._bird.update(dt, 80);
+            break;
         }
-
-        // console.log(this._bird.getPosition())
     },
     earnPoint:function(){
         this._points++;
         this._label.string = "Score: " + this._points.toString();
     },
-    _has_gameovered:false,
     gameOver:function(){
-
-      if(!this._has_gameovered)
-      {
-        this._has_gameovered = true;
-
-          //TODO: Make a game ending
-        var jumpTo = new cc.JumpTo(1,
-          cc.p( cc.winSize.width * 0.5,
-          this._ground.getBoundingBox().height + (this._bird.getBoundingBox().width * this._bird.getScaleX()) * 0.5
-        ), 0.5, 1);
-
-        this._bird.runAction(new cc.EaseBackInOut( jumpTo ));
-        // this._ground.setVisible(false);
-      }
+      this._bird.die();
     }
 });
 

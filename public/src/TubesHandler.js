@@ -65,7 +65,10 @@ var TubesHandler = cc.Node.extend({
 
 			// test tube pair intersection with player
 			if (!!this.checkIntersectionWithPlayer){
-				this.checkIntersectionWithPlayer(tubePair.getUpRect(), tubePair.getDownRect(), tubePair.getCoinRect(), tubePair);
+				if (this.checkIntersectionWithPlayer(tubePair.getUpRect(), tubePair.getDownRect(), tubePair.getCoinRect(), tubePair)){
+					cc.log("tube bounding box:", tubePair.getUpRect());
+					break;
+				}
 			}
 
 			// set tube pair next position on this frame

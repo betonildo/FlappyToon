@@ -1,9 +1,17 @@
 var MAX_HOP = 5;
 
+var PlayerState = {
+	ALIVE:'ALIVE',
+	DEAD:'DEAD'
+};
+
 var Player = cc.Node.extend({
 	_sprite:null,
 	_gravity:-9.8,
 	_currentVelocity:1,
+	_currentState:null,
+	_MIN_HEIGHT:0,
+	_MAX_HEIGHT:0,
 	ctor:function(){
 		// super call
 		this._super();
@@ -13,6 +21,9 @@ var Player = cc.Node.extend({
 		this._gravity = -9.8;
 		this._isHopping = false;
 		this._hopHeight = 0;
+
+		// set current state
+		this._currentState = PlayerState.ALIVE;
 
 		// time
 		this._elapsedTime = 0;
@@ -65,14 +76,19 @@ var Player = cc.Node.extend({
 
 		return true;
 	},
+	setMinMaxHeight:function(MIN_HEIGHT,MAX_HEIGHT){
+		// set MIN and MAX height that the play can jump to
+		this._MIN_HEIGHT = MIN_HEIGHT;
+		this._MAX_HEIGHT = MAX_HEIGHT;
+	},
 	getRect:function(){
 		return this._sprite.getBoundingBox();
 	},
 	getBoundingBox:function(){
-		var bb = cc.rect(	this.getPositionX(),
-											this.getPositionY(),
-											this.getRect().width * this.getScale(),
-											this.getRect().height * this.getScale());
+		var bb = cc.rect(	this.getPositionX() - this._sprite.getBoundingBox().width * 0.5 * this.getScaleX(),
+							this.getPositionY() - this._sprite.getBoundingBox().height * 0.5 * this.getScaleY(),
+							this._sprite.getBoundingBox().width * this.getScaleX(),
+							this._sprite.getBoundingBox().height * this.getScaleY());
 		return bb;
 	},
 	startHopping:function(){
@@ -91,19 +107,40 @@ var Player = cc.Node.extend({
 		/// trigger jump
 		else this.stopHopping();
 	},
+	die:function(){
+		console.log('Bird Bounding Box:',this.getBoundingBox());
+		this._currentState = PlayerState.DEAD;
+	},
 	update:function(deltaTime, velocity){
 
-		// hopping the jump
-		if(this._isHopping)
-			this.hopping();
+		// really need to change to State Pattern
+		switch(this._currentState){
+			case PlayerState.ALIVE:
+				// hopping the jump
+				if(this._isHopping)
+					this.hopping();
+				break;
+
+			case PlayerState.DEAD:
+				// just DIE
+				break;
+		}
 
 
 		var positionY = this.getPositionY();
-		positionY += this._currentVelocity * deltaTime * velocity;
-		this._currentVelocity += this._gravity * deltaTime;
 
-		var screenPercentage = (positionY - cc.winSize.height * 2) / cc.winSize.height;
-		this.setPositionY(positionY);
-		this.setRotation(Math.sin(screenPercentage));
+
+		// setup the maximum values to jump to
+		if (positionY < this._MAX_HEIGHT && positionY > this._MIN_HEIGHT){
+		
+			positionY += this._currentVelocity * deltaTime * velocity;
+			this._currentVelocity += this._gravity * deltaTime;
+
+			var offsetFromMiddle = (positionY / cc.winSize.height) - 0.5;
+
+			this.setPositionY(positionY);
+			this.setRotation(Math.sin(offsetFromMiddle));
+			console.log(offsetFromMiddle);		
+		}
 	}
 })

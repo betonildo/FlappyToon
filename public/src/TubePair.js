@@ -68,26 +68,26 @@ var TubePair = cc.Node.extend({
 	},
 	getUpRect:function(){
 		var uRect = this._up.getBoundingBox();
-		return cc.rect(	this.getPositionX(),
-										uRect.y + cc.winSize.height,
-										uRect.width,
-										uRect.height);
+		return cc.rect(	this.getPositionX() - uRect.width / 2,
+						uRect.y + this.getPositionY() - uRect.height / 2,
+						uRect.width,
+						uRect.height);
 	},
 	getDownRect:function(){
 		var dRect = this._down.getBoundingBox();
-		console.log(dRect);
-		return cc.rect(	this.getPositionX(),
-										dRect.y + cc.winSize.height,
-										dRect.width,
-										dRect.height);
+		
+		return cc.rect(	this.getPositionX() - dRect.width / 2,
+						dRect.y - this.getPositionY() - dRect.height / 2,
+						dRect.width,
+						dRect.height);
 	},
 	getCoinRect:function(){
 		if (!this._hasRemovedCoin){
 			var cRect = this._coin.getContentSize();
 			var rRect = cc.rect(	this.getPositionX() - (cRect.width * this._coin.getScaleX()) * 0.25,
-														this.getPositionY(),
-														cRect.width * this._coin.getScaleX(),
-														cRect.height);
+									this.getPositionY(),
+									cRect.width * this._coin.getScaleX(),
+									cRect.height);
 			return rRect;
 
 		}
@@ -97,7 +97,7 @@ var TubePair = cc.Node.extend({
 	removeCoin:function(){
 		if(!this._hasRemovedCoin){
 			this._hasRemovedCoin = true;
-			this._coin.removeFromParentAndCleanup(true);
+			this._coin.removeFromParent(true);
 		}
 	},
 	insertCoinAgain:function(){
